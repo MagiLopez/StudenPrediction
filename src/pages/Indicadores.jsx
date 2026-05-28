@@ -8,6 +8,9 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from "recharts"
 
+import { useNavigate } from "react-router-dom"
+import { useAuth } from "@/context/AuthContext"
+
 const RADIAN = Math.PI / 180
 const renderLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
   if (percent <= 0.08) return null
@@ -21,6 +24,14 @@ const renderLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }) =>
 }
 
 export default function Indicadores() {
+  const { user } = useAuth()
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    if (!user) {
+      navigate("/login")
+    }
+  }, [user, navigate])
   const [carrera, setCarrera] = useState("")
   const [anio, setAnio] = useState("")
   const [loading, setLoading] = useState(false)
