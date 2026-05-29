@@ -12,24 +12,15 @@ export default function Navbar() {
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
-  const isHomePage = location.pathname === "/"
-  const isPrediccionPage = location.pathname === "/prediccion"
-
-  // Solo mostrar en Home y Predicción (páginas públicas)
-  if (!isHomePage && !isPrediccionPage) return null
-
+  // App.jsx ya se encarga de no renderizar Navbar si hay sesión.
+  // Aquí solo manejamos qué links mostrar según la ruta.
   const navLinks = [
     { label: "Inicio", href: "/" },
     { label: "Predicción", href: "/prediccion" },
-    { label: "Dashboard", href: "/indicadores", protected: true },
   ]
 
-  const handleNavClick = (href, isProtected) => {
+  const handleNavClick = (href) => {
     setMobileMenuOpen(false)
-    if (isProtected && !user) {
-      setShowLoginModal(true)
-      return
-    }
     navigate(href)
   }
 
@@ -39,7 +30,7 @@ export default function Navbar() {
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
-            <button 
+            <button
               onClick={() => navigate("/")}
               className="flex items-center gap-2 group"
             >
@@ -51,63 +42,35 @@ export default function Navbar() {
 
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center gap-6">
-              {navLinks.map((link) => {
-                const isProtected = link.protected && !user
-                return (
-                  <button
-                    key={link.href}
-                    onClick={() => handleNavClick(link.href, link.protected)}
-                    className={`text-sm transition-colors ${
-                      location.pathname === link.href
-                        ? "text-primary font-medium"
-                        : isProtected
-                        ? "text-slate-400 cursor-not-allowed"
-                        : "text-slate-600 hover:text-primary"
-                    }`}
-                    disabled={isProtected}
-                  >
-                    {link.label}
-                    {isProtected && (
-                      <span className="ml-1 text-xs text-slate-400">🔒</span>
-                    )}
-                  </button>
-                )
-              })}
+              {navLinks.map((link) => (
+                <button
+                  key={link.href}
+                  onClick={() => handleNavClick(link.href)}
+                  className={`text-sm transition-colors ${
+                    location.pathname === link.href
+                      ? "text-primary font-medium"
+                      : "text-slate-600 hover:text-primary"
+                  }`}
+                >
+                  {link.label}
+                </button>
+              ))}
             </div>
 
-            {/* Desktop Auth Buttons */}
+            {/* Desktop Auth */}
             <div className="hidden md:flex items-center gap-3">
-              {user ? (
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-lg">
-                    <User className="w-3.5 h-3.5 text-slate-500" />
-                    <span className="text-sm text-slate-600">{user.name}</span>
-                  </div>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => {
-                      logout()
-                      navigate("/")
-                    }}
-                  >
-                    Salir
-                  </Button>
-                </div>
-              ) : (
-                <Button 
-                  size="sm" 
-                  onClick={() => setShowLoginModal(true)}
-                  className="gap-2"
-                >
-                  <LogIn className="w-4 h-4" />
-                  Iniciar sesión
-                </Button>
-              )}
+              <Button
+                size="sm"
+                onClick={() => setShowLoginModal(true)}
+                className="gap-2"
+              >
+                <LogIn className="w-4 h-4" />
+                Iniciar sesión
+              </Button>
             </div>
 
             {/* Mobile menu button */}
-            <button 
+            <button
               className="md:hidden p-2 rounded-lg hover:bg-slate-100"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             >
@@ -120,64 +83,37 @@ export default function Navbar() {
         {mobileMenuOpen && (
           <div className="md:hidden border-t border-slate-100 py-3 bg-white">
             <div className="flex flex-col gap-1 px-4">
-              {navLinks.map((link) => {
-                const isProtected = link.protected && !user
-                return (
-                  <button
-                    key={link.href}
-                    onClick={() => handleNavClick(link.href, link.protected)}
-                    className={`px-3 py-2 rounded-lg text-left text-sm transition-colors ${
-                      location.pathname === link.href
-                        ? "bg-primary/10 text-primary font-medium"
-                        : isProtected
-                        ? "text-slate-400 cursor-not-allowed"
-                        : "text-slate-600 hover:bg-slate-50"
-                    }`}
-                    disabled={isProtected}
-                  >
-                    {link.label}
-                    {isProtected && (
-                      <span className="ml-2 text-xs text-slate-400">(Inicia sesión)</span>
-                    )}
-                  </button>
-                )
-              })}
-              {!user && (
+              {navLinks.map((link) => (
                 <button
-                  onClick={() => {
-                    setMobileMenuOpen(false)
-                    setShowLoginModal(true)
-                  }}
-                  className="mt-2 px-3 py-2 rounded-lg text-left text-sm text-primary hover:bg-primary/10"
+                  key={link.href}
+                  onClick={() => handleNavClick(link.href)}
+                  className={`px-3 py-2 rounded-lg text-left text-sm transition-colors ${
+                    location.pathname === link.href
+                      ? "bg-primary/10 text-primary font-medium"
+                      : "text-slate-600 hover:bg-slate-50"
+                  }`}
                 >
-                  Iniciar sesión
+                  {link.label}
                 </button>
-              )}
-              {user && (
-                <button
-                  onClick={() => {
-                    setMobileMenuOpen(false)
-                    logout()
-                    navigate("/")
-                  }}
-                  className="mt-2 px-3 py-2 rounded-lg text-left text-sm text-red-600 hover:bg-red-50"
-                >
-                  Cerrar sesión
-                </button>
-              )}
+              ))}
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false)
+                  setShowLoginModal(true)
+                }}
+                className="mt-2 px-3 py-2 rounded-lg text-left text-sm text-primary hover:bg-primary/10"
+              >
+                Iniciar sesión
+              </button>
             </div>
           </div>
         )}
       </nav>
 
-      <LoginModal 
-        open={showLoginModal} 
+      <LoginModal
+        open={showLoginModal}
         onOpenChange={setShowLoginModal}
-        onSuccess={() => {
-          if (location.pathname === "/indicadores") {
-            navigate("/indicadores")
-          }
-        }}
+        onSuccess={() => navigate("/indicadores")}
       />
     </>
   )
