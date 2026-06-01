@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Progress } from "@/components/ui/progress"
 import { cn } from "@/lib/utils"
 
-const API_BASE = "http://localhost:8000"
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 const STEPS = [
   { id: 0, label: "Variables Académicas",  icon: BookOpen },
