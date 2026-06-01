@@ -1,6 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
 import { AuthProvider, useAuth } from "@/context/AuthContext"
-import Layout from "@/components/layout/Layout"
 import Navbar from "@/components/layout/Navbar"
 import Home from "@/pages/Home"
 import Indicadores from "@/pages/Indicadores"
@@ -12,22 +11,24 @@ function AppRoutes() {
 
   return (
     <>
-      {!user && <Navbar />}
+      <Navbar />
 
       <Routes>
         {user ? (
-          <Route element={<Layout />}>
-            <Route path="/indicadores" element={<Indicadores />} />
-            <Route path="/prediccion"  element={<Prediccion />} />
-            <Route path="/registros"   element={<Registros />} />
-            <Route path="/"            element={<Home />} />
-            <Route path="*"            element={<Navigate to="/indicadores" replace />} />
-          </Route>
-        ) : (
+          // ── Usuario logueado: todas las rutas disponibles ──────────────────
           <>
-            <Route path="/"           element={<Home />} />
+            <Route path="/" element={<Home />} />
+            <Route path="/indicadores" element={<Indicadores />} />
             <Route path="/prediccion" element={<Prediccion />} />
-            <Route path="*"           element={<Navigate to="/" replace />} />
+            <Route path="/registros" element={<Registros />} />
+            <Route path="*" element={<Navigate to="/indicadores" replace />} />
+          </>
+        ) : (
+          // ── Sin sesión: solo rutas públicas ──────────────────────────────
+          <>
+            <Route path="/" element={<Home />} />
+            <Route path="/prediccion" element={<Prediccion />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
           </>
         )}
       </Routes>
@@ -35,7 +36,7 @@ function AppRoutes() {
   )
 }
 
-function App() {
+export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
@@ -44,5 +45,3 @@ function App() {
     </BrowserRouter>
   )
 }
-
-export default App

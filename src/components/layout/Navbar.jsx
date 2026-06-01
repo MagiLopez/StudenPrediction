@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom"
 import { useAuth } from "@/context/AuthContext"
 import LoginModal from "@/components/auth/LoginModal"
 import { Button } from "@/components/ui/button"
-import { Brain, LogIn, User, Menu, X } from "lucide-react"
+import { Brain, LogIn, LogOut, User, Menu, X } from "lucide-react"
 
 export default function Navbar() {
   const { user, logout } = useAuth()
@@ -12,36 +12,50 @@ export default function Navbar() {
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
-  // App.jsx ya se encarga de no renderizar Navbar si hay sesión.
-  // Aquí solo manejamos qué links mostrar según la ruta.
-  const navLinks = [
-    { label: "Inicio", href: "/" },
-    { label: "Predicción", href: "/prediccion" },
-  ]
+  const navLinks = user
+    ? [
+        { label: "Inicio", href: "/" },
+        { label: "Predicción", href: "/prediccion" },
+        { label: "Indicadores", href: "/indicadores" },
+      ]
+    : [
+        { label: "Inicio", href: "/" },
+        { label: "Predicción", href: "/prediccion" },
+      ]
 
   const handleNavClick = (href) => {
     setMobileMenuOpen(false)
     navigate(href)
   }
 
+  const handleLogout = () => {
+    logout()
+    setMobileMenuOpen(false)
+    navigate("/")
+  }
+
   return (
     <>
       <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-100">
         <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between h-16">
+          <div className="flex items-center h-16">
             {/* Logo */}
-            <button
-              onClick={() => navigate("/")}
-              className="flex items-center gap-2 group"
-            >
-              <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-                <Brain className="w-4 h-4 text-primary-foreground" />
-              </div>
-              <span className="font-semibold text-slate-800">EduPredict</span>
-            </button>
+            <div className="flex-1">
+              <button
+                onClick={() => navigate("/")}
+                className="flex items-center gap-2 group"
+              >
+                <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+                  <Brain className="w-4 h-4 text-primary-foreground" />
+                </div>
+                <span className="font-semibold text-slate-800">
+                  EduPredict
+                </span>
+              </button>
+            </div>
 
             {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center gap-6">
+            <div className="hidden md:flex flex-1 justify-center items-center gap-8">
               {navLinks.map((link) => (
                 <button
                   key={link.href}
@@ -58,24 +72,51 @@ export default function Navbar() {
             </div>
 
             {/* Desktop Auth */}
-            <div className="hidden md:flex items-center gap-3">
-              <Button
-                size="sm"
-                onClick={() => setShowLoginModal(true)}
-                className="gap-2"
-              >
-                <LogIn className="w-4 h-4" />
-                Iniciar sesión
-              </Button>
+            <div className="hidden md:flex flex-1 justify-end items-center gap-3">
+              {user ? (
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100">
+                    <User className="w-4 h-4 text-slate-600" />
+                    <span className="text-sm text-slate-700">
+                      {user.email}
+                    </span>
+                  </div>
+
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleLogout}
+                    className="gap-2"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Cerrar sesión
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  size="sm"
+                  onClick={() => setShowLoginModal(true)}
+                  className="gap-2"
+                >
+                  <LogIn className="w-4 h-4" />
+                  Iniciar sesión
+                </Button>
+              )}
             </div>
 
-            {/* Mobile menu button */}
-            <button
-              className="md:hidden p-2 rounded-lg hover:bg-slate-100"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            >
-              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </button>
+            {/* Mobile Menu Button */}
+            <div className="md:hidden ml-auto">
+              <button
+                className="p-2 rounded-lg hover:bg-slate-100"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              >
+                {mobileMenuOpen ? (
+                  <X className="w-5 h-5" />
+                ) : (
+                  <Menu className="w-5 h-5" />
+                )}
+              </button>
+            </div>
           </div>
         </div>
 
@@ -96,15 +137,25 @@ export default function Navbar() {
                   {link.label}
                 </button>
               ))}
-              <button
-                onClick={() => {
-                  setMobileMenuOpen(false)
-                  setShowLoginModal(true)
-                }}
-                className="mt-2 px-3 py-2 rounded-lg text-left text-sm text-primary hover:bg-primary/10"
-              >
-                Iniciar sesión
-              </button>
+
+              {user ? (
+                <button
+                  onClick={handleLogout}
+                  className="mt-2 px-3 py-2 rounded-lg text-left text-sm text-red-600 hover:bg-red-50"
+                >
+                  Cerrar sesión
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false)
+                    setShowLoginModal(true)
+                  }}
+                  className="mt-2 px-3 py-2 rounded-lg text-left text-sm text-primary hover:bg-primary/10"
+                >
+                  Iniciar sesión
+                </button>
+              )}
             </div>
           </div>
         )}

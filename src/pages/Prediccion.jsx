@@ -394,7 +394,6 @@ export default function Prediccion() {
               <Button variant="outline" onClick={() => { setResultado(null); setStep(0); setError("") }}>
                 Nueva predicción
               </Button>
-              <Button>Guardar y generar alerta</Button>
             </div>
           </CardContent>
         </Card>
