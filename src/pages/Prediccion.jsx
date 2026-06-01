@@ -194,7 +194,7 @@ export default function Prediccion() {
       } else if (err.response?.status === 503) {
         setError("El modelo no está cargado en el servidor. Ejecuta el entrenamiento primero.")
       } else if (err.code === "ERR_NETWORK") {
-        setError("No se pudo conectar al servidor. Verifica que la API esté corriendo en localhost:8000.")
+        setError(`No se pudo conectar al servidor. Verifica que la API esté corriendo en ${API_BASE}.`)
       } else {
         setError("Error inesperado. Intenta nuevamente.")
       }
