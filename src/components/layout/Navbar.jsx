@@ -17,6 +17,7 @@ export default function Navbar() {
         { label: "Inicio", href: "/" },
         { label: "Predicción", href: "/prediccion" },
         { label: "Indicadores", href: "/indicadores" },
+        { label: "Registros", href: "/registros" },
       ]
     : [
         { label: "Inicio", href: "/" },
@@ -32,6 +33,34 @@ export default function Navbar() {
     logout()
     setMobileMenuOpen(false)
     navigate("/")
+  }
+
+  // Obtener el nombre completo del usuario
+  const getDisplayName = () => {
+    if (user?.nombre && user?.apellido) {
+      return `${user.nombre} ${user.apellido}`
+    }
+    if (user?.nombre) {
+      return user.nombre
+    }
+    if (user?.email) {
+      return user.email.split('@')[0]
+    }
+    return "Usuario"
+  }
+
+  // Obtener iniciales para el avatar
+  const getInitials = () => {
+    if (user?.nombre && user?.apellido) {
+      return `${user.nombre.charAt(0)}${user.apellido.charAt(0)}`.toUpperCase()
+    }
+    if (user?.nombre) {
+      return user.nombre.charAt(0).toUpperCase()
+    }
+    if (user?.email) {
+      return user.email.charAt(0).toUpperCase()
+    }
+    return "U"
   }
 
   return (
@@ -76,9 +105,13 @@ export default function Navbar() {
               {user ? (
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100">
-                    <User className="w-4 h-4 text-slate-600" />
+                    <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center">
+                      <span className="text-xs font-semibold text-primary">
+                        {getInitials()}
+                      </span>
+                    </div>
                     <span className="text-sm text-slate-700">
-                      {user.email}
+                      {getDisplayName()}
                     </span>
                   </div>
 
@@ -132,27 +165,33 @@ export default function Navbar() {
                     location.pathname === link.href
                       ? "bg-primary/10 text-primary font-medium"
                       : "text-slate-600 hover:bg-slate-50"
-                  }`}
-                >
+                  }`}>
                   {link.label}
                 </button>
               ))}
 
               {user ? (
-                <button
-                  onClick={handleLogout}
-                  className="mt-2 px-3 py-2 rounded-lg text-left text-sm text-red-600 hover:bg-red-50"
-                >
-                  Cerrar sesión
-                </button>
+                <>
+                  <div className="border-t border-slate-100 my-2" />
+                  <div className="px-3 py-2">
+                    <p className="text-xs text-slate-500">Conectado como</p>
+                    <p className="text-sm font-medium text-slate-800"> {getDisplayName()}
+                    </p>
+                    <p className="text-xs text-slate-500 mt-1">{user.email}</p>
+                  </div>
+                  <button
+                    onClick={handleLogout}
+                    className="px-3 py-2 rounded-lg text-left text-sm text-red-600 hover:bg-red-50">
+                    Cerrar sesión
+                  </button>
+                </>
               ) : (
                 <button
                   onClick={() => {
                     setMobileMenuOpen(false)
                     setShowLoginModal(true)
                   }}
-                  className="mt-2 px-3 py-2 rounded-lg text-left text-sm text-primary hover:bg-primary/10"
-                >
+                  className="mt-2 px-3 py-2 rounded-lg text-left text-sm text-primary hover:bg-primary/10">
                   Iniciar sesión
                 </button>
               )}

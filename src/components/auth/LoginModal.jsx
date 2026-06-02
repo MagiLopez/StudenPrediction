@@ -25,54 +25,85 @@ function Tab({ active, onClick, children }) {
   )
 }
 
-export default function LoginModal({ open, onOpenChange }) {
+export default function LoginModal({ open, onOpenChange, onSuccess }) {
   const { login, register } = useAuth()
-  const [modo, setModo]         = useState("login")   // "login" | "registro"
-  const [correo, setCorreo]     = useState("")
+  const [modo, setModo] = useState("login")   // "login" | "registro"
+  const [correo, setCorreo] = useState("")
   const [password, setPassword] = useState("")
   const [password2, setPassword2] = useState("")      // solo en registro
-  const [showPwd, setShowPwd]   = useState(false)
-  const [error, setError]       = useState("")
-  const [success, setSuccess]   = useState("")
-  const [loading, setLoading]   = useState(false)
+  const [nombre, setNombre] = useState("")            // solo en registro
+  const [apellido, setApellido] = useState("")        // solo en registro
+  const [showPwd, setShowPwd] = useState(false)
+  const [error, setError] = useState("")
+  const [success, setSuccess] = useState("")
+  const [loading, setLoading] = useState(false)
 
   const reset = () => {
-    setCorreo(""); setPassword(""); setPassword2("")
-    setError(""); setSuccess(""); setLoading(false); setShowPwd(false)
+    setCorreo("")
+    setPassword("")
+    setPassword2("")
+    setNombre("")
+    setApellido("")
+    setError("")
+    setSuccess("")
+    setLoading(false)
+    setShowPwd(false)
   }
 
-  const handleModo = (m) => { setModo(m); reset() }
+  const handleModo = (m) => { 
+    setModo(m)
+    reset()
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    setError(""); setSuccess("")
+    setError("")
+    setSuccess("")
 
     // Validaciones básicas frontend
     if (!correo || !password) {
-      setError("Completa todos los campos"); return
+      setError("Completa todos los campos")
+      return
     }
+    
     if (modo === "registro") {
+      if (!nombre || !apellido) {
+        setError("Completa nombre y apellido")
+        return
+      }
       if (password.length < 6) {
-        setError("La contraseña debe tener al menos 6 caracteres"); return
+        setError("La contraseña debe tener al menos 6 caracteres")
+        return
       }
       if (password !== password2) {
-        setError("Las contraseñas no coinciden"); return
+        setError("Las contraseñas no coinciden")
+        return
       }
     }
 
     setLoading(true)
-    const fn = modo === "login" ? login : register
-    const result = await fn(correo, password)
-
-    if (result.ok) {
-      if (modo === "registro") {
-        setSuccess("¡Cuenta creada! Sesión iniciada.")
-        setTimeout(() => { onOpenChange(false); reset() }, 1200)
+    
+    if (modo === "login") {
+      const result = await login(correo, password)
+      if (result.ok) {
+        if (onSuccess) onSuccess()
+        onOpenChange(false)
+        reset()
       } else {
-        onOpenChange(false); reset()
+        setError(result.msg)
       }
     } else {
-      setError(result.msg)
+      const result = await register(correo, password, nombre, apellido)
+      if (result.ok) {
+        setSuccess("¡Cuenta creada! Sesión iniciada.")
+        setTimeout(() => {
+          if (onSuccess) onSuccess()
+          onOpenChange(false)
+          reset()
+        }, 1200)
+      } else {
+        setError(result.msg)
+      }
     }
     setLoading(false)
   }
@@ -94,18 +125,48 @@ export default function LoginModal({ open, onOpenChange }) {
 
         {/* Tabs */}
         <div className="flex bg-muted rounded-lg p-1 mt-1">
-          <Tab active={modo === "login"}    onClick={() => handleModo("login")}>Iniciar sesión</Tab>
+          <Tab active={modo === "login"} onClick={() => handleModo("login")}>Iniciar sesión</Tab>
           <Tab active={modo === "registro"} onClick={() => handleModo("registro")}>Crear cuenta</Tab>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4 mt-1">
+          {/* Nombre y Apellido - solo en registro */}
+          {modo === "registro" && (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="auth-nombre">Nombre</Label>
+                <Input
+                  id="auth-nombre"
+                  type="text"
+                  placeholder="Tu nombre"
+                  value={nombre}
+                  onChange={e => { setNombre(e.target.value); setError("") }}
+                  required
+                  disabled={loading}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="auth-apellido">Apellido</Label>
+                <Input
+                  id="auth-apellido"
+                  type="text"
+                  placeholder="Tu apellido"
+                  value={apellido}
+                  onChange={e => { setApellido(e.target.value); setError("") }}
+                  required
+                  disabled={loading}
+                />
+              </div>
+            </>
+          )}
+
           {/* Correo */}
           <div className="space-y-2">
             <Label htmlFor="auth-email">Correo electrónico</Label>
             <Input
               id="auth-email"
               type="email"
-              placeholder="coordinador@ejemplo.com"
+              placeholder="Correo"
               value={correo}
               onChange={e => { setCorreo(e.target.value); setError("") }}
               required
@@ -128,7 +189,9 @@ export default function LoginModal({ open, onOpenChange }) {
                 disabled={loading}
                 className="pr-10"
               />
-              <button type="button" tabIndex={-1}
+              <button 
+                type="button" 
+                tabIndex={-1}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 onClick={() => setShowPwd(v => !v)}
               >

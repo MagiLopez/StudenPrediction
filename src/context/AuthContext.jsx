@@ -11,30 +11,29 @@ export function AuthProvider({ children }) {
     catch { return null }
   })
 
-  // ── Login: llama a POST /student/login ───────────────────────────────────────
+  // ── Login: llama a POST /login (endpoint de admin) ─────────────────────────
   const login = async (correo, contraseña) => {
     try {
-      // El endpoint espera un StudentFeatures completo, pero para login
-      // solo enviamos correo y contraseña con campos dummy requeridos
-      const { data } = await axios.post(`${API_BASE}/student/login`, {
+      const response = await axios.post(`${API_BASE}/login`, {
         correo,
         contraseña,
-        // Campos dummy requeridos por el schema (el backend solo valida correo/contraseña)
-        edad: 0, sexo: "M", promedio_general: 0, materias_repetidas: "No",
-        horas_tutoria: 0, trabaja: "No", ingreso_mensual: 0,
-        apoyo_familiar: "Bajo", responsabilidades_familiares: "Bajo",
-        becado: "No", matricula_al_dia: "No", deudor: "No",
-        desplazado: "No", tipo_vivienda: "Propia",
-        ratio_aprobacion_sem1: 0, ratio_aprobacion_sem2: 0,
       })
 
-      // Si el backend responde con HTTPException (error) no es login exitoso
-      if (data?.detail) return { ok: false, msg: data.detail }
-
-      const userData = { correo, nombre: correo.split("@")[0], email: correo }
-      setUser(userData)
-      localStorage.setItem("edupredict_user", JSON.stringify(userData))
-      return { ok: true }
+      // Si el login es exitoso, response.data contiene el admin
+      if (response.data?.admin) {
+        const userData = { 
+          correo: response.data.admin.correo,
+          nombre: response.data.admin.Nombre,
+          apellido: response.data.admin.Apellido,
+          email: response.data.admin.correo,
+          role: "admin"
+        }
+        setUser(userData)
+        localStorage.setItem("edupredict_user", JSON.stringify(userData))
+        return { ok: true }
+      }
+      
+      return { ok: false, msg: "Credenciales incorrectas" }
     } catch (err) {
       if (err.response?.status === 401) return { ok: false, msg: "Credenciales incorrectas" }
       if (err.code === "ERR_NETWORK") return { ok: false, msg: "No se pudo conectar al servidor" }
@@ -42,25 +41,19 @@ export function AuthProvider({ children }) {
     }
   }
 
-  // ── Registro: llama a POST /student ─────────────────────────────────────────
-  // Solo crea la cuenta, NO hace predicción todavía
-  const register = async (correo, contraseña) => {
+  // ── Registro: crear admin ─────────────────────────────────────────────────
+  const register = async (correo, contraseña, nombre, apellido) => {
     try {
-      await axios.post(`${API_BASE}/student`, {
+      await axios.post(`${API_BASE}/admin`, {
         correo,
         contraseña,
-        // Campos vacíos/dummy — se llenarán al hacer la predicción
-        edad: 0, sexo: "M", promedio_general: 0, materias_repetidas: "No",
-        horas_tutoria: 0, trabaja: "No", ingreso_mensual: 0,
-        apoyo_familiar: "Bajo", responsabilidades_familiares: "Bajo",
-        becado: "No", matricula_al_dia: "No", deudor: "No",
-        desplazado: "No", tipo_vivienda: "Propia",
-        ratio_aprobacion_sem1: 0, ratio_aprobacion_sem2: 0,
+        Nombre: nombre,
+        Apellido: apellido,
       })
       // Después de registrar, hacer login automáticamente
       return await login(correo, contraseña)
     } catch (err) {
-      if (err.response?.status === 422) return { ok: false, msg: "Datos inválidos. Revisa el correo." }
+      if (err.response?.status === 422) return { ok: false, msg: "Datos inválidos. Revisa los campos." }
       if (err.code === "ERR_NETWORK") return { ok: false, msg: "No se pudo conectar al servidor" }
       return { ok: false, msg: "Error al crear la cuenta. Intenta nuevamente." }
     }
