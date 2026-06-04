@@ -102,6 +102,47 @@ const RIESGO_CONFIG = {
   bajo:  { label: "Bajo",  color: "bg-emerald-100 text-emerald-700 border-emerald-200", dot: "bg-emerald-500", icon: TrendingUp },
 }
 
+// Parse CSV text into array of objects. Headers are normalized to snake_case lower-case keys.
+function parseCSV(text) {
+  const lines = text.split(/\r?\n/).filter(l => l.trim() !== "")
+  if (lines.length === 0) return []
+  const rawHeader = lines[0].split(/,|;/).map(h => h.trim())
+  const headers = rawHeader.map(h => h
+    .replace(/\s+/g, "_")
+    .replace(/[^a-zA-Z0-9_]/g, "")
+    .toLowerCase())
+
+  const rows = lines.slice(1)
+  const data = rows.map(row => {
+    const cols = row.split(/,|;/)
+    const obj = {}
+    headers.forEach((key, i) => {
+      let val = cols[i] !== undefined ? cols[i].trim() : ""
+      if (val === "") {
+        obj[key] = null
+        return
+      }
+      // Normalize boolean-like Spanish words
+      const low = val.toLowerCase()
+      if (low === "si" || low === "sí") {
+        obj[key] = "Sí"
+        return
+      }
+      if (low === "no") {
+        obj[key] = "No"
+        return
+      }
+      // Numeric
+      if (/^-?\d+(?:\.\d+)?$/.test(val)) {
+        obj[key] = Number(val)
+        return
+      }
+      obj[key] = val
+    })
+    return obj
+  })
+  return data
+}
 function RiesgoBadge({ nivel, size = "sm" }) {
   const cfg = RIESGO_CONFIG[nivel]
   return (
@@ -308,11 +349,19 @@ export default function Registros() {
 
     try {
       const text = await file.text()
-      const parsed = JSON.parse(text)
-      const payload = Array.isArray(parsed) ? { students: parsed } : parsed
+      let payload
+      const isCSV = file.name?.toLowerCase().endsWith('.csv') || file.type === 'text/csv'
+      if (isCSV) {
+        const students = parseCSV(text)
+        if (!students || students.length === 0) throw new Error('CSV vacío o mal formado.')
+        payload = { students }
+      } else {
+        const parsed = JSON.parse(text)
+        payload = Array.isArray(parsed) ? { students: parsed } : parsed
+      }
 
       if (!payload?.students || !Array.isArray(payload.students)) {
-        throw new Error("El JSON debe contener una propiedad 'students' con un arreglo de estudiantes.")
+        throw new Error("El JSON/CSV debe convertirse a una propiedad 'students' con un arreglo de estudiantes.")
       }
 
       const { data } = await axios.post(`${import.meta.env.VITE_API_URL || "http://localhost:8000"}/api/v1/predict/batch`, payload)
@@ -413,15 +462,6 @@ export default function Registros() {
           <CardContent className="p-4">
             <div className="flex items-center gap-3 flex-wrap">
               <Filter className="w-4 h-4 text-muted-foreground shrink-0" />
-              <div className="relative flex-1 min-w-48">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
-                <Input
-                  placeholder="Buscar por nombre o carrera..."
-                  value={busqueda}
-                  onChange={e => setBusqueda(e.target.value)}
-                  className="pl-8 h-9 text-sm"
-                />
-              </div>
               <div className="w-44">
                 <Select value={filtroRiesgo} onValueChange={setFiltroRiesgo}>
                   <SelectTrigger className="h-9 text-sm">
@@ -454,7 +494,7 @@ export default function Registros() {
                 <input
                   ref={batchInputRef}
                   type="file"
-                  accept=".json,application/json"
+                  accept=".json,.csv,application/json,text/csv"
                   className="hidden"
                   onChange={handleFileUpload}
                 />
@@ -468,7 +508,7 @@ export default function Registros() {
                   {batchLoading ? (
                     <><Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />Cargando...</>
                   ) : (
-                    "Subir JSON batch"
+                    "Subir CSV/JSON batch"
                   )}
                 </Button>
               </div>
