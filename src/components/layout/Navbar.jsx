@@ -17,7 +17,7 @@ export default function Navbar() {
         { label: "Inicio", href: "/" },
         { label: "Predicción", href: "/prediccion" },
         { label: "Indicadores", href: "/indicadores" },
-        { label: "registros", href: "/registros" },
+        { label: "Registros", href: "/registros" },
         { label: "Historial", href: "/historial" },
       ]
     : [

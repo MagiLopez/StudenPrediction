@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Progress } from "@/components/ui/progress"
 import { cn } from "@/lib/utils"
+import { Info } from "lucide-react"
 import { registrarYPredict } from "@/services/api"
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
@@ -51,13 +52,32 @@ function mapFormToAPI(form) {
   }
 }
 
-// ── Componentes de UI ─────────────────────────────────────────────────────────
-function Field({ label, children, required }) {
+
+// ── Field con hint expandible ─────────────────────────────────────────────────
+function Field({ label, children, required, hint }) {
+  const [showHint, setShowHint] = useState(false)
+
   return (
     <div className="space-y-2">
-      <Label className="text-sm text-muted-foreground">
-        {label} {required && <span className="text-red-500">*</span>}
-      </Label>
+      <div className="flex items-center gap-1.5">
+        <Label className="text-sm text-muted-foreground">
+          {label} {required && <span className="text-red-500">*</span>}
+        </Label>
+        {hint && (
+          <button
+            type="button"
+            onClick={() => setShowHint(v => !v)}
+            className="w-4 h-4 rounded-full bg-muted text-muted-foreground text-[10px] font-bold flex items-center justify-center hover:bg-primary/20 hover:text-primary transition-colors shrink-0"
+          >
+            ?
+          </button>
+        )}
+      </div>
+      {hint && showHint && (
+        <div className="rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-700">
+          {hint}
+        </div>
+      )}
       {children}
     </div>
   )
@@ -239,10 +259,12 @@ export default function Prediccion() {
       <Field label="Materias Repetidas" required>
         <Input className={inputCls} placeholder="Ej: 2" type="number" min="0" value={form.materias_repetidas} onChange={setInput("materias_repetidas")} />
       </Field>
-      <Field label="Ratio Aprobación Semestre 1" required>
+      <Field label="Ratio Aprobación Semestre 1" required
+        hint="Divide las materias que aprobaste entre el total en que estabas matriculado en el semestre 1. Ejemplo: aprobaste 4 de 5 = 0.80. Si aprobaste todas → 1.0. Si no tienes semestre 1, escribe 0.">
         <Input className={inputCls} placeholder="Ej: 0.80" type="number" step="0.01" min="0" max="1" value={form.ratio_sem1} onChange={setInput("ratio_sem1")} />
       </Field>
-      <Field label="Ratio Aprobación Semestre 2" required>
+      <Field label="Ratio Aprobación Semestre 2" required
+        hint="Igual que el anterior pero para el semestre 2. Materias aprobadas ÷ materias matriculadas. Si aún no tienes semestre 2, usa el mismo valor del semestre 1.">
         <Input className={inputCls} placeholder="Ej: 0.75" type="number" step="0.01" min="0" max="1" value={form.ratio_sem2} onChange={setInput("ratio_sem2")} />
       </Field>
       <Field label="Horas de Tutoría" required>

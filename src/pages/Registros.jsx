@@ -1,4 +1,4 @@
-import { useRef, useState, useMemo } from "react"
+import { useRef, useState, useMemo, useEffect } from "react"
 import axios from "axios"
 import {
   Search, Filter, Eye, X, User, BookOpen, Wallet, Users,
@@ -314,6 +314,18 @@ export default function Registros() {
   const [filterPromedioMax, setFilterPromedioMax] = useState("")
   const batchInputRef = useRef(null)
 
+  useEffect(() => {
+      try {
+        const saved = localStorage.getItem("batch_results")
+
+        if (saved) {
+          setBatchResults(JSON.parse(saved))
+        }
+      } catch (error) {
+        console.error("Error cargando batch_results:", error)
+      }
+    }, [])
+  
   const registrosFiltrados = useMemo(() => {
     return MOCK_REGISTROS.filter(r => {
       const matchBusqueda = r.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
@@ -365,10 +377,14 @@ export default function Registros() {
       }
 
       const { data } = await axios.post(`${import.meta.env.VITE_API_URL || "http://localhost:8000"}/api/v1/predict/batch`, payload)
-      setBatchResults(payload.students.map((student, index) => ({
+      const results = payload.students.map((student, index) => ({
         ...student,
         ...data.predictions[index],
-      })))
+      }))
+      setBatchResults(results)
+      localStorage.setItem("batch_results", JSON.stringify(results))
+      window.dispatchEvent(new CustomEvent("batch_results_updated", { detail: results }))
+
     } catch (err) {
       if (err instanceof SyntaxError) {
         setBatchError("JSON inválido. Revisa el archivo y vuelve a intentarlo.")
@@ -769,7 +785,7 @@ export default function Registros() {
                 <div className="text-slate-500 text-sm">
                   {filteredBatchResults.length === 0 ? "No hay registros que cumplan los filtros." : ""}
                 </div>
-                <Button variant="outline" onClick={() => setBatchResults(null)}>
+                <Button variant="outline" onClick={() => { setBatchResults(null); localStorage.removeItem("batch_results"); window.dispatchEvent(new CustomEvent("batch_results_updated", { detail: null })) }}>
                   Limpiar resultados
                 </Button>
               </div>
