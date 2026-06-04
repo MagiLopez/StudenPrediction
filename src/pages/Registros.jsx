@@ -1,7 +1,8 @@
-import { useState, useMemo } from "react"
+import { useRef, useState, useMemo } from "react"
+import axios from "axios"
 import {
   Search, Filter, Eye, X, User, BookOpen, Wallet, Users,
-  TrendingUp, TrendingDown, Minus, ChevronDown
+  TrendingUp, TrendingDown, Minus, ChevronDown, Loader2
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -127,6 +128,17 @@ function ProbaBar({ value, nivel }) {
   )
 }
 
+function BatchStatusBadge({ value }) {
+  const styles = {
+    Alto: "bg-red-100 text-red-700 border border-red-200",
+    Medio: "bg-amber-100 text-amber-700 border border-amber-200",
+    Bajo: "bg-emerald-100 text-emerald-700 border border-emerald-200",
+  }
+  return (
+    <span className={cn("inline-flex items-center rounded-full px-2 py-1 text-[11px] font-semibold", styles[value] || "bg-slate-100 text-slate-700 border border-slate-200")}>{value}</span>
+  )
+}
+
 // ── Panel de detalle ──────────────────────────────────────────────────────────
 function DetallePanel({ registro, onClose }) {
   if (!registro) return null
@@ -244,6 +256,22 @@ export default function Registros() {
   const [filtroRiesgo, setFiltroRiesgo] = useState("")
   const [filtroCarrera, setFiltroCarrera] = useState("")
   const [seleccionado, setSeleccionado] = useState(null)
+  const [batchResults, setBatchResults] = useState(null)
+  const [batchLoading, setBatchLoading] = useState(false)
+  const [batchError, setBatchError] = useState("")
+  const [filterSexo, setFilterSexo] = useState("")
+  const [filterBecado, setFilterBecado] = useState("")
+  const [filterApoyo, setFilterApoyo] = useState("")
+  const [filterResponsabilidades, setFilterResponsabilidades] = useState("")
+  const [filterVivienda, setFilterVivienda] = useState("")
+  const [filterTrabaja, setFilterTrabaja] = useState("")
+  const [filterDeudor, setFilterDeudor] = useState("")
+  const [filterDesplazado, setFilterDesplazado] = useState("")
+  const [filterEdadMin, setFilterEdadMin] = useState("")
+  const [filterEdadMax, setFilterEdadMax] = useState("")
+  const [filterPromedioMin, setFilterPromedioMin] = useState("")
+  const [filterPromedioMax, setFilterPromedioMax] = useState("")
+  const batchInputRef = useRef(null)
 
   const registrosFiltrados = useMemo(() => {
     return MOCK_REGISTROS.filter(r => {
@@ -255,11 +283,95 @@ export default function Registros() {
     })
   }, [busqueda, filtroRiesgo, filtroCarrera])
 
-  const conteo = useMemo(() => ({
-    alto: MOCK_REGISTROS.filter(r => r.riesgo === "alto").length,
-    medio: MOCK_REGISTROS.filter(r => r.riesgo === "medio").length,
-    bajo: MOCK_REGISTROS.filter(r => r.riesgo === "bajo").length,
-  }), [])
+  const conteo = useMemo(() => {
+    const source = batchResults || []
+    const getRisk = item => (item.nivel_riesgo || item.riesgo || "").toString().toLowerCase()
+
+    return {
+      alto: source.filter(item => getRisk(item) === "alto").length,
+      medio: source.filter(item => getRisk(item) === "medio").length,
+      bajo: source.filter(item => getRisk(item) === "bajo").length,
+    }
+  }, [batchResults])
+
+  const handleBatchUploadClick = () => {
+    batchInputRef.current?.click()
+  }
+
+  const handleFileUpload = async (event) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    setBatchLoading(true)
+    setBatchError("")
+    setBatchResults(null)
+
+    try {
+      const text = await file.text()
+      const parsed = JSON.parse(text)
+      const payload = Array.isArray(parsed) ? { students: parsed } : parsed
+
+      if (!payload?.students || !Array.isArray(payload.students)) {
+        throw new Error("El JSON debe contener una propiedad 'students' con un arreglo de estudiantes.")
+      }
+
+      const { data } = await axios.post(`${import.meta.env.VITE_API_URL || "http://localhost:8000"}/api/v1/predict/batch`, payload)
+      setBatchResults(payload.students.map((student, index) => ({
+        ...student,
+        ...data.predictions[index],
+      })))
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        setBatchError("JSON inválido. Revisa el archivo y vuelve a intentarlo.")
+      } else if (err.response?.status === 422) {
+        setBatchError("El archivo JSON no coincide con el formato esperado.")
+      } else if (err.response?.status === 503) {
+        setBatchError("El modelo no está cargado en el servidor. Ejecuta el entrenamiento primero.")
+      } else if (err.code === "ERR_NETWORK") {
+        setBatchError("No se pudo conectar al servidor. Verifica que la API esté corriendo.")
+      } else {
+        setBatchError(err.message || "Error inesperado. Intenta nuevamente.")
+      }
+    } finally {
+      setBatchLoading(false)
+      event.target.value = ""
+    }
+  }
+
+  const filteredBatchResults = useMemo(() => {
+    if (!batchResults) return []
+    return batchResults.filter(item => {
+      if (filterSexo && item.sexo !== filterSexo) return false
+      if (filterBecado && item.becado !== filterBecado) return false
+      if (filterApoyo && item.apoyo_familiar !== filterApoyo) return false
+      if (filterResponsabilidades && item.responsabilidades_familiares !== filterResponsabilidades) return false
+      if (filterVivienda && item.tipo_vivienda !== filterVivienda) return false
+      if (filterTrabaja && item.trabaja !== filterTrabaja) return false
+      if (filterDeudor && item.deudor !== filterDeudor) return false
+      if (filterDesplazado && item.desplazado !== filterDesplazado) return false
+      if (filtroRiesgo && item.nivel_riesgo?.toLowerCase() !== filtroRiesgo.toLowerCase()) return false
+      if (filterEdadMin && Number(item.edad) < Number(filterEdadMin)) return false
+      if (filterEdadMax && Number(item.edad) > Number(filterEdadMax)) return false
+      if (filterPromedioMin && Number(item.promedio_general) < Number(filterPromedioMin)) return false
+      if (filterPromedioMax && Number(item.promedio_general) > Number(filterPromedioMax)) return false
+      return true
+    })
+  }, [batchResults, filtroRiesgo, filterSexo, filterBecado, filterApoyo, filterResponsabilidades, filterVivienda, filterTrabaja, filterDeudor, filterDesplazado, filterEdadMin, filterEdadMax, filterPromedioMin, filterPromedioMax])
+
+  const clearBatchFilters = () => {
+    setFilterSexo("")
+    setFilterBecado("")
+    setFilterApoyo("")
+    setFilterResponsabilidades("")
+    setFilterVivienda("")
+    setFilterTrabaja("")
+    setFilterDeudor("")
+    setFilterDesplazado("")
+    setFilterEdadMin("")
+    setFilterEdadMax("")
+    setFilterPromedioMin("")
+    setFilterPromedioMax("")
+  }
 
   return (
     <>
@@ -268,7 +380,7 @@ export default function Registros() {
         <div>
           <h1 className="text-xl font-semibold">Registros de Predicciones</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Historial de estudiantes evaluados — {MOCK_REGISTROS.length} registros
+            Historial de estudiantes evaluados — {batchResults?.length ?? 0} registros
           </p>
         </div>
 
@@ -322,18 +434,43 @@ export default function Registros() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="w-48">
-                <Select value={filtroCarrera} onValueChange={setFiltroCarrera}>
-                  <SelectTrigger className="h-9 text-sm">
-                    <SelectValue placeholder="Carrera" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Programación">Programación</SelectItem>
-                    <SelectItem value="Bases de Datos">Bases de Datos</SelectItem>
-                    <SelectItem value="Redes">Redes</SelectItem>
-                    <SelectItem value="Inteligencia Artificial">Inteligencia Artificial</SelectItem>
-                  </SelectContent>
-                </Select>
+              {/* Filtro de carrera deshabilitado temporariamente */}
+              {false && (
+                <div className="w-48">
+                  <Select value={filtroCarrera} onValueChange={setFiltroCarrera}>
+                    <SelectTrigger className="h-9 text-sm">
+                      <SelectValue placeholder="Carrera" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Programación">Programación</SelectItem>
+                      <SelectItem value="Bases de Datos">Bases de Datos</SelectItem>
+                      <SelectItem value="Redes">Redes</SelectItem>
+                      <SelectItem value="Inteligencia Artificial">Inteligencia Artificial</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              <div className="flex items-center gap-2">
+                <input
+                  ref={batchInputRef}
+                  type="file"
+                  accept=".json,application/json"
+                  className="hidden"
+                  onChange={handleFileUpload}
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-9 text-xs"
+                  onClick={handleBatchUploadClick}
+                  disabled={batchLoading}
+                >
+                  {batchLoading ? (
+                    <><Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />Cargando...</>
+                  ) : (
+                    "Subir JSON batch"
+                  )}
+                </Button>
               </div>
               {(filtroRiesgo || filtroCarrera || busqueda) && (
                 <Button
@@ -346,10 +483,121 @@ export default function Registros() {
                 </Button>
               )}
             </div>
+
+            {batchResults && (
+              <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <div>
+                  <p className="text-xs text-slate-500 mb-2">Sexo</p>
+                  <Select value={filterSexo} onValueChange={setFilterSexo}>
+                    <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Sexo" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="M">Masculino</SelectItem>
+                      <SelectItem value="F">Femenino</SelectItem>
+                      <SelectItem value="Otro">Otro</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500 mb-2">Apoyo familiar</p>
+                  <Select value={filterApoyo} onValueChange={setFilterApoyo}>
+                    <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Apoyo" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Alto">Alto</SelectItem>
+                      <SelectItem value="Medio">Medio</SelectItem>
+                      <SelectItem value="Bajo">Bajo</SelectItem>
+                      <SelectItem value="Ninguno">Ninguno</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500 mb-2">Responsabilidades</p>
+                  <Select value={filterResponsabilidades} onValueChange={setFilterResponsabilidades}>
+                    <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Responsabilidades" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Ninguna">Ninguna</SelectItem>
+                      <SelectItem value="Leve">Leve</SelectItem>
+                      <SelectItem value="Moderada">Moderada</SelectItem>
+                      <SelectItem value="Alta">Alta</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500 mb-2">Becado</p>
+                  <Select value={filterBecado} onValueChange={setFilterBecado}>
+                    <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Becado" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Sí">Sí</SelectItem>
+                      <SelectItem value="No">No</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500 mb-2">Trabaja</p>
+                  <Select value={filterTrabaja} onValueChange={setFilterTrabaja}>
+                    <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Trabaja" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Sí">Sí</SelectItem>
+                      <SelectItem value="No">No</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500 mb-2">Deudor</p>
+                  <Select value={filterDeudor} onValueChange={setFilterDeudor}>
+                    <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Deudor" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Sí">Sí</SelectItem>
+                      <SelectItem value="No">No</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500 mb-2">Vivienda</p>
+                  <Select value={filterVivienda} onValueChange={setFilterVivienda}>
+                    <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Vivienda" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Propia">Propia</SelectItem>
+                      <SelectItem value="Alquilada">Alquilada</SelectItem>
+                      <SelectItem value="Familiar">Familiar</SelectItem>
+                      <SelectItem value="Otro">Otro</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500 mb-2">Desplazado</p>
+                  <Select value={filterDesplazado} onValueChange={setFilterDesplazado}>
+                    <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Desplazado" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Sí">Sí</SelectItem>
+                      <SelectItem value="No">No</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-xs text-slate-500">Edad</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Input type="number" min="0" placeholder="Min" value={filterEdadMin} onChange={e => setFilterEdadMin(e.target.value)} className="h-9 text-sm" />
+                    <Input type="number" min="0" placeholder="Max" value={filterEdadMax} onChange={e => setFilterEdadMax(e.target.value)} className="h-9 text-sm" />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-xs text-slate-500">Promedio</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Input type="number" step="0.01" min="0" placeholder="Min" value={filterPromedioMin} onChange={e => setFilterPromedioMin(e.target.value)} className="h-9 text-sm" />
+                    <Input type="number" step="0.01" min="0" placeholder="Max" value={filterPromedioMax} onChange={e => setFilterPromedioMax(e.target.value)} className="h-9 text-sm" />
+                  </div>
+                </div>
+                <div className="flex items-end">
+                  <Button variant="ghost" size="sm" className="h-9 text-xs text-slate-500" onClick={clearBatchFilters}>
+                    Limpiar filtros batch
+                  </Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
-        {/* Tabla */}
+        {/* Tabla
         <Card>
           <CardContent className="p-0">
             {registrosFiltrados.length === 0 ? (
@@ -409,7 +657,85 @@ export default function Registros() {
               </div>
             )}
           </CardContent>
-        </Card>
+        </Card> */}
+
+        {batchError && (
+          <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+            {batchError}
+          </div>
+        )}
+
+        {batchResults ? (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2">Resultados Batch</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4 p-6">
+              <div className="text-sm text-slate-500">
+                Mostrando {filteredBatchResults.length} de {batchResults.length} registros batch.
+              </div>
+              <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+                <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
+                  <thead className="bg-slate-50">
+                    <tr>
+                      {[
+                        "#", "Edad", "Sexo", "Promedio", "Materias", "Horas tutoría", "Trabaja",
+                        "Ingreso", "Apoyo", "Responsabilidades", "Becado", "Matrícula",
+                        "Deudor", "Desplazado", "Vivienda", "Ratio S1", "Ratio S2",
+                        "Riesgo", "Probabilidad", "Nivel", "Fecha"
+                      ].map((heading, idx) => (
+                        <th key={idx} className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                          {heading}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {filteredBatchResults.map((item, index) => (
+                      <tr key={index} className="hover:bg-slate-50 transition-colors">
+                        <td className="whitespace-nowrap px-4 py-3 font-medium text-slate-700">{index + 1}</td>
+                        <td className="whitespace-nowrap px-4 py-3 text-slate-600">{item.edad}</td>
+                        <td className="whitespace-nowrap px-4 py-3 text-slate-600">{item.sexo}</td>
+                        <td className="whitespace-nowrap px-4 py-3 text-slate-600">{item.promedio_general}</td>
+                        <td className="whitespace-nowrap px-4 py-3 text-slate-600">{item.materias_repetidas}</td>
+                        <td className="whitespace-nowrap px-4 py-3 text-slate-600">{item.horas_tutoria}</td>
+                        <td className="whitespace-nowrap px-4 py-3 text-slate-600">{item.trabaja}</td>
+                        <td className="whitespace-nowrap px-4 py-3 text-slate-600">{Number(item.ingreso_mensual).toLocaleString("es-CO")}</td>
+                        <td className="whitespace-nowrap px-4 py-3 text-slate-600">{item.apoyo_familiar}</td>
+                        <td className="whitespace-nowrap px-4 py-3 text-slate-600">{item.responsabilidades_familiares}</td>
+                        <td className="whitespace-nowrap px-4 py-3 text-slate-600">{item.becado}</td>
+                        <td className="whitespace-nowrap px-4 py-3 text-slate-600">{item.matricula_al_dia}</td>
+                        <td className="whitespace-nowrap px-4 py-3 text-slate-600">{item.deudor}</td>
+                        <td className="whitespace-nowrap px-4 py-3 text-slate-600">{item.desplazado}</td>
+                        <td className="whitespace-nowrap px-4 py-3 text-slate-600">{item.tipo_vivienda}</td>
+                        <td className="whitespace-nowrap px-4 py-3 text-slate-600">{item.ratio_aprobacion_sem1}</td>
+                        <td className="whitespace-nowrap px-4 py-3 text-slate-600">{item.ratio_aprobacion_sem2}</td>
+                        <td className="whitespace-nowrap px-4 py-3">
+                          <span className="inline-flex rounded-full bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-700">
+                            {item.riesgo === 1 ? "Desertor" : "Continúa"}
+                          </span>
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 text-slate-600 font-semibold">{Math.round(item.probabilidad_riesgo * 100)}%</td>
+                        <td className="whitespace-nowrap px-4 py-3">
+                          <BatchStatusBadge value={item.nivel_riesgo} />
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 text-slate-600">{new Date(item.timestamp).toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" })}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="flex flex-wrap gap-2 justify-between items-center">
+                <div className="text-slate-500 text-sm">
+                  {filteredBatchResults.length === 0 ? "No hay registros que cumplan los filtros." : ""}
+                </div>
+                <Button variant="outline" onClick={() => setBatchResults(null)}>
+                  Limpiar resultados
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ) : null}
       </div>
 
       {/* Panel lateral de detalle */}
