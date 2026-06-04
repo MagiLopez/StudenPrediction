@@ -1,13 +1,14 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
-import { AuthProvider, useAuth } from "@/context/AuthContext"
-import Navbar from "@/components/layout/Navbar"
-import Home from "@/pages/Home"
-import Indicadores from "@/pages/Indicadores"
-import Prediccion from "@/pages/Prediccion"
-import Registros from "@/pages/Registros"
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider, useAuth } from "@/context/AuthContext";
+import Navbar from "@/components/layout/Navbar";
+import Home from "@/pages/Home";
+import Indicadores from "@/pages/Indicadores";
+import Prediccion from "@/pages/Prediccion";
+import Historial from "@/pages/Historial";
+import Registros from "@/pages/Registros";
 
 function AppRoutes() {
-  const { user } = useAuth()
+  const { user } = useAuth();
 
   return (
     <>
@@ -20,6 +21,7 @@ function AppRoutes() {
             <Route path="/" element={<Home />} />
             <Route path="/indicadores" element={<Indicadores />} />
             <Route path="/prediccion" element={<Prediccion />} />
+            <Route path="/historial" element={<Historial />} />
             <Route path="/registros" element={<Registros />} />
             <Route path="*" element={<Navigate to="/indicadores" replace />} />
           </>
@@ -33,7 +35,7 @@ function AppRoutes() {
         )}
       </Routes>
     </>
-  )
+  );
 }
 
 export default function App() {
@@ -43,5 +45,5 @@ export default function App() {
         <AppRoutes />
       </AuthProvider>
     </BrowserRouter>
-  )
+  );
 }

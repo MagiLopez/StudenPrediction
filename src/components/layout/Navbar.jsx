@@ -1,67 +1,68 @@
-import { useState } from "react"
-import { useNavigate, useLocation } from "react-router-dom"
-import { useAuth } from "@/context/AuthContext"
-import LoginModal from "@/components/auth/LoginModal"
-import { Button } from "@/components/ui/button"
-import { Brain, LogIn, LogOut, User, Menu, X } from "lucide-react"
+import { useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
+import LoginModal from "@/components/auth/LoginModal";
+import { Button } from "@/components/ui/button";
+import { Brain, LogIn, LogOut, User, Menu, X } from "lucide-react";
 
 export default function Navbar() {
-  const { user, logout } = useAuth()
-  const navigate = useNavigate()
-  const location = useLocation()
-  const [showLoginModal, setShowLoginModal] = useState(false)
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navLinks = user
     ? [
         { label: "Inicio", href: "/" },
         { label: "Predicción", href: "/prediccion" },
         { label: "Indicadores", href: "/indicadores" },
-        { label: "Registros", href: "/registros" },
+        { label: "registros", href: "/registros" },
+        { label: "Historial", href: "/historial" },
       ]
     : [
         { label: "Inicio", href: "/" },
         { label: "Predicción", href: "/prediccion" },
-      ]
+      ];
 
   const handleNavClick = (href) => {
-    setMobileMenuOpen(false)
-    navigate(href)
-  }
+    setMobileMenuOpen(false);
+    navigate(href);
+  };
 
   const handleLogout = () => {
-    logout()
-    setMobileMenuOpen(false)
-    navigate("/")
-  }
+    logout();
+    setMobileMenuOpen(false);
+    navigate("/");
+  };
 
   // Obtener el nombre completo del usuario
   const getDisplayName = () => {
     if (user?.nombre && user?.apellido) {
-      return `${user.nombre} ${user.apellido}`
+      return `${user.nombre} ${user.apellido}`;
     }
     if (user?.nombre) {
-      return user.nombre
+      return user.nombre;
     }
     if (user?.email) {
-      return user.email.split('@')[0]
+      return user.email.split("@")[0];
     }
-    return "Usuario"
-  }
+    return "Usuario";
+  };
 
   // Obtener iniciales para el avatar
   const getInitials = () => {
     if (user?.nombre && user?.apellido) {
-      return `${user.nombre.charAt(0)}${user.apellido.charAt(0)}`.toUpperCase()
+      return `${user.nombre.charAt(0)}${user.apellido.charAt(0)}`.toUpperCase();
     }
     if (user?.nombre) {
-      return user.nombre.charAt(0).toUpperCase()
+      return user.nombre.charAt(0).toUpperCase();
     }
     if (user?.email) {
-      return user.email.charAt(0).toUpperCase()
+      return user.email.charAt(0).toUpperCase();
     }
-    return "U"
-  }
+    return "U";
+  };
 
   return (
     <>
@@ -77,9 +78,7 @@ export default function Navbar() {
                 <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
                   <Brain className="w-4 h-4 text-primary-foreground" />
                 </div>
-                <span className="font-semibold text-slate-800">
-                  EduPredict
-                </span>
+                <span className="font-semibold text-slate-800">EduPredict</span>
               </button>
             </div>
 
@@ -165,7 +164,8 @@ export default function Navbar() {
                     location.pathname === link.href
                       ? "bg-primary/10 text-primary font-medium"
                       : "text-slate-600 hover:bg-slate-50"
-                  }`}>
+                  }`}
+                >
                   {link.label}
                 </button>
               ))}
@@ -175,23 +175,27 @@ export default function Navbar() {
                   <div className="border-t border-slate-100 my-2" />
                   <div className="px-3 py-2">
                     <p className="text-xs text-slate-500">Conectado como</p>
-                    <p className="text-sm font-medium text-slate-800"> {getDisplayName()}
+                    <p className="text-sm font-medium text-slate-800">
+                      {" "}
+                      {getDisplayName()}
                     </p>
                     <p className="text-xs text-slate-500 mt-1">{user.email}</p>
                   </div>
                   <button
                     onClick={handleLogout}
-                    className="px-3 py-2 rounded-lg text-left text-sm text-red-600 hover:bg-red-50">
+                    className="px-3 py-2 rounded-lg text-left text-sm text-red-600 hover:bg-red-50"
+                  >
                     Cerrar sesión
                   </button>
                 </>
               ) : (
                 <button
                   onClick={() => {
-                    setMobileMenuOpen(false)
-                    setShowLoginModal(true)
+                    setMobileMenuOpen(false);
+                    setShowLoginModal(true);
                   }}
-                  className="mt-2 px-3 py-2 rounded-lg text-left text-sm text-primary hover:bg-primary/10">
+                  className="mt-2 px-3 py-2 rounded-lg text-left text-sm text-primary hover:bg-primary/10"
+                >
                   Iniciar sesión
                 </button>
               )}
@@ -206,5 +210,5 @@ export default function Navbar() {
         onSuccess={() => navigate("/indicadores")}
       />
     </>
-  )
+  );
 }

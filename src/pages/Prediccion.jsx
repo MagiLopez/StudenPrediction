@@ -8,51 +8,46 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Progress } from "@/components/ui/progress"
 import { cn } from "@/lib/utils"
+import { registrarYPredict } from "@/services/api"
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 const STEPS = [
-  { id: 0, label: "Variables Académicas",  icon: BookOpen },
-  { id: 1, label: "Variables Económicas",  icon: Wallet },
-  { id: 2, label: "Variables Sociales",    icon: Users },
-  { id: 3, label: "Variables Personales",  icon: User },
+  { id: 0, label: "Datos Personales", icon: User },
+  { id: 1, label: "Variables Académicas",  icon: BookOpen },
+  { id: 2, label: "Variables Económicas",  icon: Wallet },
+  { id: 3, label: "Variables Sociales",    icon: Users },
+  { id: 4, label: "Variables Personales",  icon: User },
 ]
 
 // ── Mapeo de valores del form → formato que espera la API ────────────────────
 function mapFormToAPI(form) {
-  // sexo: "0" = Femenino, "1" = Masculino, "2" = Otro → "F" / "M" / "M"
   const sexoMap = { "0": "F", "1": "M", "2": "M" }
-
-  // apoyo_familiar: "3"=Alto, "2"=Medio, "1"=Bajo, "0"=Ninguno → "Alto"/"Medio"/"Bajo"
   const apoyoMap = { "3": "Alto", "2": "Medio", "1": "Bajo", "0": "Bajo" }
-
-  // responsabilidades: "0"=Ninguna, "1"=Leve, "2"=Moderada, "3"=Alta → "Bajo"/"Medio"/"Alto"
   const responsMap = { "0": "Bajo", "1": "Bajo", "2": "Medio", "3": "Alto" }
-
-  // tipo_vivienda: "0"=Propia, "1"=Arrendada, "2"=Familiar, "3"=Otro → "Propia"/"Alquilada"/"Familiar"
   const viviendaMap = { "0": "Propia", "1": "Alquilada", "2": "Familiar", "3": "Familiar" }
-
-  // becado, matricula_al_dia, deudor, desplazado, trabaja, materias_repetidas
-  // "1" → "Sí", "0" → "No"
   const siNo = (v) => v === "1" ? "Sí" : "No"
 
   return {
-    edad:                       parseInt(form.edad),
-    sexo:                       sexoMap[form.sexo],
-    promedio_general:           parseFloat(form.promedio_general),
-    materias_repetidas:         siNo(form.materias_repetidas === "" ? "0" : String(parseInt(form.materias_repetidas) > 0 ? "1" : "0")),
-    horas_tutoria:              parseFloat(form.horas_tutoria),
-    trabaja:                    siNo(form.trabaja),
-    ingreso_mensual:            parseFloat(form.ingreso_mensual),
-    apoyo_familiar:             apoyoMap[form.apoyo_familiar],
+    nombres: form.nombres,
+    apellidos: form.apellidos,
+    correo: form.correo,
+    edad: parseInt(form.edad),
+    sexo: sexoMap[form.sexo],
+    promedio_general: parseFloat(form.promedio_general),
+    materias_repetidas: siNo(form.materias_repetidas === "" ? "0" : String(parseInt(form.materias_repetidas) > 0 ? "1" : "0")),
+    horas_tutoria: parseFloat(form.horas_tutoria),
+    trabaja: siNo(form.trabaja),
+    ingreso_mensual: parseFloat(form.ingreso_mensual),
+    apoyo_familiar: apoyoMap[form.apoyo_familiar],
     responsabilidades_familiares: responsMap[form.responsabilidades],
-    becado:                     siNo(form.becado),
-    matricula_al_dia:           siNo(form.matricula_al_dia),
-    deudor:                     siNo(form.deudor),
-    desplazado:                 siNo(form.desplazado),
-    tipo_vivienda:              viviendaMap[form.tipo_vivienda],
-    ratio_aprobacion_sem1:      parseFloat(form.ratio_sem1),
-    ratio_aprobacion_sem2:      parseFloat(form.ratio_sem2),
+    becado: siNo(form.becado),
+    matricula_al_dia: siNo(form.matricula_al_dia),
+    deudor: siNo(form.deudor),
+    desplazado: siNo(form.desplazado),
+    tipo_vivienda: viviendaMap[form.tipo_vivienda],
+    ratio_aprobacion_sem1: parseFloat(form.ratio_sem1),
+    ratio_aprobacion_sem2: parseFloat(form.ratio_sem2),
   }
 }
 
@@ -142,10 +137,11 @@ function ResultadoReal({ data }) {
 // ── Validaciones ──────────────────────────────────────────────────────────────
 function isStepComplete(step, form) {
   const requiredFieldsByStep = {
-    0: ["promedio_general", "materias_repetidas", "ratio_sem1", "ratio_sem2", "horas_tutoria"],
-    1: ["ingreso_mensual", "becado", "matricula_al_dia", "deudor"],
-    2: ["apoyo_familiar", "responsabilidades", "tipo_vivienda", "desplazado"],
-    3: ["edad", "sexo", "trabaja"],
+    0: ["nombres", "apellidos", "correo"],
+    1: ["promedio_general", "materias_repetidas", "ratio_sem1", "ratio_sem2", "horas_tutoria"],
+    2: ["ingreso_mensual", "becado", "matricula_al_dia", "deudor"],
+    3: ["apoyo_familiar", "responsabilidades", "tipo_vivienda", "desplazado"],
+    4: ["edad", "sexo", "trabaja"],
   }
   return (requiredFieldsByStep[step] || []).every(f => {
     const v = form[f]; return v !== "" && v !== null && v !== undefined
@@ -154,6 +150,7 @@ function isStepComplete(step, form) {
 
 function isFormComplete(form) {
   return [
+    "nombres", "apellidos", "correo",
     "promedio_general", "materias_repetidas", "ratio_sem1", "ratio_sem2", "horas_tutoria",
     "ingreso_mensual", "becado", "matricula_al_dia", "deudor",
     "apoyo_familiar", "responsabilidades", "tipo_vivienda", "desplazado",
@@ -164,10 +161,12 @@ function isFormComplete(form) {
 // ── Componente principal ──────────────────────────────────────────────────────
 export default function Prediccion() {
   const [step, setStep] = useState(0)
-  const [resultado, setResultado] = useState(null)   // { riesgo, probabilidad_riesgo, nivel_riesgo, timestamp }
+  const [resultado, setResultado] = useState(null)
+  const [estudiante, setEstudiante] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [form, setForm] = useState({
+    nombres: "", apellidos: "", correo: "",
     promedio_general: "", materias_repetidas: "", ratio_sem1: "", ratio_sem2: "", horas_tutoria: "",
     ingreso_mensual: "", becado: "", matricula_al_dia: "", deudor: "",
     apoyo_familiar: "", responsabilidades: "", tipo_vivienda: "", desplazado: "",
@@ -186,8 +185,14 @@ export default function Prediccion() {
     setError("")
     try {
       const payload = mapFormToAPI(form)
-      const { data } = await axios.post(`${API_BASE}/api/v1/predict`, payload)
-      setResultado(data)
+      const data = await registrarYPredict(payload)
+      setEstudiante(data.estudiante)
+      setResultado({
+        riesgo: data.riesgo,
+        probabilidad_riesgo: data.probabilidad_riesgo,
+        nivel_riesgo: data.nivel_riesgo,
+        timestamp: data.timestamp,
+      })
     } catch (err) {
       if (err.response?.status === 422) {
         setError("Datos inválidos. Revisa los campos e intenta nuevamente.")
@@ -215,9 +220,21 @@ export default function Prediccion() {
   const selectCls = "h-11 text-base"
 
   const stepContent = [
+    <div key="dp" className="grid grid-cols-2 gap-5">
+      <Field label="Nombres" required>
+        <Input className={inputCls} placeholder="Ej: Juan" value={form.nombres} onChange={setInput("nombres")} />
+      </Field>
+      <Field label="Apellidos" required>
+        <Input className={inputCls} placeholder="Ej: Pérez" value={form.apellidos} onChange={setInput("apellidos")} />
+      </Field>
+      <Field label="Correo Electrónico" required className="col-span-2">
+        <Input className={inputCls} placeholder="Ej: juan.perez@correo.com" type="email" value={form.correo} onChange={setInput("correo")} />
+      </Field>
+    </div>,
+
     <div key="ac" className="grid grid-cols-2 gap-5">
       <Field label="Promedio General" required>
-        <Input className={inputCls} placeholder="Ej: 3.5" type="number" step="0.1" min="0" max="5" value={form.promedio_general} onChange={setInput("promedio_general")} />
+        <Input className={inputCls} placeholder="0 - 5" type="number" step="0.1" min="0" max="5" value={form.promedio_general} onChange={setInput("promedio_general")} />
       </Field>
       <Field label="Materias Repetidas" required>
         <Input className={inputCls} placeholder="Ej: 2" type="number" min="0" value={form.materias_repetidas} onChange={setInput("materias_repetidas")} />
@@ -389,9 +406,20 @@ export default function Prediccion() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-5 p-8">
+            {estudiante && (
+              <div className="rounded-xl border bg-slate-50 p-4 flex items-center gap-4">
+                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-lg">
+                  {estudiante.nombres.charAt(0)}
+                </div>
+                <div>
+                  <p className="font-semibold text-slate-800">{estudiante.nombres} {estudiante.apellidos}</p>
+                  <p className="text-sm text-slate-500">{estudiante.correo}</p>
+                </div>
+              </div>
+            )}
             <ResultadoReal data={resultado} />
             <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={() => { setResultado(null); setStep(0); setError("") }}>
+              <Button variant="outline" onClick={() => { setResultado(null); setEstudiante(null); setStep(0); setError(""); setForm(f => ({...f, nombres: "", apellidos: "", correo: ""})) }}>
                 Nueva predicción
               </Button>
             </div>
