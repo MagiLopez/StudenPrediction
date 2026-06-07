@@ -735,7 +735,7 @@ export default function Registros() {
                   <thead className="bg-slate-50">
                     <tr>
                       {[
-                        "#", "Edad", "Sexo", "Promedio", "Materias", "Horas tutoría", "Trabaja",
+                        "#","Correo", "Nombres", "Apellidos", "Edad", "Sexo", "Promedio", "Materias", "Horas tutoría", "Trabaja",
                         "Ingreso", "Apoyo", "Responsabilidades", "Becado", "Matrícula",
                         "Deudor", "Desplazado", "Vivienda", "Ratio S1", "Ratio S2",
                         "Riesgo", "Probabilidad", "Nivel", "Fecha"
@@ -750,6 +750,9 @@ export default function Registros() {
                     {filteredBatchResults.map((item, index) => (
                       <tr key={index} className="hover:bg-slate-50 transition-colors">
                         <td className="whitespace-nowrap px-4 py-3 font-medium text-slate-700">{index + 1}</td>
+                        <td className="whitespace-nowrap px-4 py-3 text-slate-600">{item.correo}</td>
+                        <td className="whitespace-nowrap px-4 py-3 text-slate-600">{item.nombres}</td>
+                        <td className="whitespace-nowrap px-4 py-3 text-slate-600">{item.apellidos}</td>
                         <td className="whitespace-nowrap px-4 py-3 text-slate-600">{item.edad}</td>
                         <td className="whitespace-nowrap px-4 py-3 text-slate-600">{item.sexo}</td>
                         <td className="whitespace-nowrap px-4 py-3 text-slate-600">{item.promedio_general}</td>
